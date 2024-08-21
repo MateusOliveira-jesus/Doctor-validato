@@ -43,7 +43,7 @@ class api_logic
         ];
     } // END SUCESS RESPOSTA
 
-    function validate_url()
+    function validator_url()
     {
         if (empty($this->params['url'])) {
             return $this->error_response("ERRO: Parâmetro URL não fornecido");
@@ -56,7 +56,7 @@ class api_logic
         $links = $this->get_links($url);
         $invalidLinks = [];
         foreach ($links as $key => $link) {
-            if ($this->validate_w3c_url($link)['status'] == false) {
+            if (!$this->validate_w3c_url($link)) {
                 $invalidLinks[$key] = $link;
             }
         }
@@ -71,13 +71,7 @@ class api_logic
             ];
         }
 
-        return [
-            'status' => 'ERROR_W3C',
-            'mensagem' => "ERRO DE W3C",
-            'results' => [
-                "url" => $links
-            ]
-        ];
+        return $links;
     } // END VALIDATOR URL
     private function check_url($url)
     {
@@ -98,7 +92,6 @@ class api_logic
 
     private function get_links($dominio)
     {
-        
         $url = "https://www.producao.mpitemporario.com.br/{$dominio}";
         //FAZENDO UMA REQUIZIÇÃO PARA URL
         $ch = curl_init();
@@ -133,65 +126,43 @@ class api_logic
 
         return $linkArray;
     } //END GET LLINKS
-    private function validate_w3c_url($url)
+    function validate_w3c_url($url)
     {
-        $api_url = 'https://validator.w3.org/nu/?doc=' . urlencode($url) . '&out=json';
+        $api_url = 'https://validator.w3.org/nu/?doc=' . urlencode($url);
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $api_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Accept: application/json',
-            'User-Agent: PHP-Curl/1.0'
+            'Accept: application/json'
         ]);
         $response = curl_exec($ch);
 
         if (curl_errno($ch)) {
             curl_close($ch);
-            return ['status' => false, 'message' => 'cURL error: ' . curl_error($ch)];
+            return false;
         }
 
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($http_code === 404) {
-            return ['status' => false, 'message' => 'URL not found (404)'];
+            return false;
         }
 
         $result = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return ['status' => false, 'message' => 'JSON decode error: ' . json_last_error_msg()];
+            return false; // JSON decode error
         }
 
         if (isset($result['messages']) && !empty($result['messages'])) {
-            $errors = [];
-            $warnings = [];
             foreach ($result['messages'] as $message) {
                 if ($message['type'] === 'error') {
-                    $errors[] = $message['message'];
-                } elseif ($message['type'] === 'info' && isset($message['subtype']) && $message['subtype'] === 'warning') {
-                    $warnings[] = $message['message'];
+                    return false;
                 }
-            }
-
-            if (!empty($errors)) {
-                return [
-                    'status' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $errors,
-                    'warnings' => $warnings
-                ];
-            } else {
-                return [
-                    'status' => true,
-                    'message' => 'Validation passed with warnings',
-                    'warnings' => $warnings
-                ];
             }
         }
 
-        return ['status' => true, 'message' => 'Validation passed with no issues'];
-    }
-
-    // END VALIDATOR W3C
+        return true;
+    }// END VALIDATOR W3C
 } // END CLASS
