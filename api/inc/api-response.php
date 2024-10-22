@@ -4,7 +4,8 @@
 class api_response
 {
     // ARMAZENA OS DADOS DA API
-    private $data;
+    private  $array ;
+    private  $data ;
     //METHOD PRMITIDOS
     private $varMethod = ['GET', 'POST'];
     // PARAMETROS DA URL PERMITIDOS
@@ -12,8 +13,8 @@ class api_response
     // PARAMETROS DA URL NÃO PERMITIDOS
     private $noPermited = ["/", "https:"];
     //CONSTRUTOR DA CLASS
-    public function __construct()
-    {
+    public function __construct($array)
+    {$this->array;
         $this->data = [];
     } //END CONSTRUCT
 
